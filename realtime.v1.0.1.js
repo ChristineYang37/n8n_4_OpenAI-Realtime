@@ -24,6 +24,7 @@
 
     dc.onopen = () => console.log("📡 Data channel open");
     dc.onmessage = e => {
+      console.log("⌨️ Received data-channel message:", e.data);
       const msg = JSON.parse(e.data);
       if (msg.conversation?.item?.input_audio_transcription) {
         const d = msg.conversation.item.input_audio_transcription;
