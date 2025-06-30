@@ -1,4 +1,6 @@
 (async function(){
+  console.log("✅ realtime.js 已加载");
+
   // 從 HTML 注入變數中讀取
   const SECRET = window.OPENAI_SECRET;
   const MODEL = window.OPENAI_MODEL;
