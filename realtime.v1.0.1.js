@@ -1,12 +1,12 @@
 (async function(){
   console.log("✅ realtime.js 已加载");
 
-  // 從 HTML 注入變數中讀取
+  //── 注入并打印全局变量 ──
   const SECRET = window.OPENAI_SECRET;
-  const MODEL = window.OPENAI_MODEL;
-  console.log("🔗 Starting WebRTC connection", { MODEL });
+  const MODEL  = window.OPENAI_MODEL;
+  console.log("🔑 Injected secret/model:", SECRET, MODEL);
 
-  const chatEl = document.getElementById("chat");
+  const chatEl  = document.getElementById("chat");
   const audioEl = document.getElementById("agent-audio");
 
   function appendBubble(parent, text, clazz, done) {
@@ -19,13 +19,33 @@
   }
 
   try {
+    //── 建立 PeerConnection ──
     const pc = new RTCPeerConnection();
-    const dc = pc.createDataChannel("oai-events");
+    console.log("🧊 RTCPeerConnection created");
 
-    dc.onopen = () => console.log("📡 Data channel open");
+    pc.onicecandidate = e => console.log("🧊 ICE candidate:", e.candidate);
+    pc.oniceconnectionstatechange = () =>
+      console.log("🌐 ICE state:", pc.iceConnectionState);
+    pc.onconnectionstatechange = () =>
+      console.log("🔗 Connection state:", pc.connectionState);
+
+    //── DataChannel ──
+    const dc = pc.createDataChannel("oai-events");
+    dc.onopen = () => {
+      console.log("📡 Data channel open (readyState=", dc.readyState, ")");
+      // — 测试回环消息，确保通道可用 —
+      dc.send(JSON.stringify({ test: "hello from client" }));
+    };
     dc.onmessage = e => {
       console.log("⌨️ Received data-channel message:", e.data);
-      const msg = JSON.parse(e.data);
+      let msg;
+      try { msg = JSON.parse(e.data); }
+      catch(err){ console.warn("⚠️ Invalid JSON:", e.data); return; }
+
+      if (msg.test) {
+        console.log("🔁 Loopback test received:", msg.test);
+        return;
+      }
       if (msg.conversation?.item?.input_audio_transcription) {
         const d = msg.conversation.item.input_audio_transcription;
         appendBubble(chatEl, d.delta || d.completed, 'user', !!d.completed);
@@ -36,37 +56,39 @@
       }
     };
 
-    pc.ontrack = e => {
-      audioEl.srcObject = e.streams[0];
-    };
-
-    // 啟用麥克風
+    //── 麦克风采集 & 回放调试 ──
     const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    console.log("🎤 Mic tracks:", micStream.getAudioTracks());
+    // 可选：在页面上回放音频，确认确实采集到声音
+    const debugAudio = new Audio();
+    debugAudio.srcObject = micStream;
+    debugAudio.autoplay = true;
+    debugAudio.volume = 0.2;
+    document.body.appendChild(debugAudio);
+
     micStream.getTracks().forEach(track => pc.addTrack(track, micStream));
 
-    // 建立 offer
+    //── SDP 握手 ──
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    console.log("📨 Offer created");
+    console.log("📨 Offer created (SDP length = ", offer.sdp.length, ")");
 
-    // 將 offer 傳給 OpenAI Realtime API
-   const res = await fetch(
-     `https://api.openai.com/v1/realtime?model=${MODEL}`,    // ← 用 MODEL 变量
-     {
+    const res = await fetch(
+      `https://api.openai.com/v1/realtime?model=${MODEL}`,
+      {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${SECRET}`,
           "Content-Type":  "application/sdp"
         },
-        body: pc.localDescription.sdp,
-     }
-   );
-
-    if (!res.ok) {
-      throw new Error(`Realtime API returned ${res.status}`);
-    }
+        body: offer.sdp,
+      }
+    );
+    console.log("📡 Realtime API response status:", res.status);
+    if (!res.ok) throw new Error(`Realtime API returned ${res.status}`);
 
     const answer = await res.text();
+    console.log("📩 Received answer SDP (length=", answer.length, ")");
     await pc.setRemoteDescription({ type: "answer", sdp: answer });
     console.log("✅ SDP negotiation complete");
 
