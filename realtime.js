@@ -47,17 +47,17 @@
     console.log("📨 Offer created");
 
     // 將 offer 傳給 OpenAI Realtime API
-    const res = await fetch(
-      `https://api.openai.com/v1/realtime?model=${MODEL}`,
-      {
+   const res = await fetch(
+     `https://api.openai.com/v1/realtime?model=${MODEL}`,    // ← 用 MODEL 变量
+     {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${SECRET}`,
-          "Content-Type": "application/sdp"
+          "Content-Type":  "application/sdp"
         },
-        body: offer.sdp,
-      }
-    );
+        body: pc.localDescription.sdp,
+     }
+   );
 
     if (!res.ok) {
       throw new Error(`Realtime API returned ${res.status}`);
