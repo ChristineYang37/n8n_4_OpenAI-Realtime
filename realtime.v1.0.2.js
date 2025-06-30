@@ -34,7 +34,6 @@
     dc.onopen = () => {
       console.log("📡 Data channel open (readyState=", dc.readyState, ")");
       // — 测试回环消息，确保通道可用 —
-      dc.send(JSON.stringify({ test: "hello from client" }));
     };
     dc.onmessage = e => {
       console.log("⌨️ Received data-channel message:", e.data);
