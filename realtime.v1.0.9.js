@@ -94,7 +94,7 @@
       console.log('▶️ Audio track received, playing');
       audioEl.srcObject = e.streams[0];
       audioEl.volume = 0.8;
-      audioEl.playbackRate = 0.70;
+      audioEl.playbackRate = 0.75;
       audioEl.play();
     };
 
