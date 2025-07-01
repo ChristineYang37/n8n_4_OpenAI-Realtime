@@ -99,7 +99,7 @@
       console.log('▶️ Audio track received, playing');
       audioEl.srcObject = e.streams[0];
       audioEl.volume = 0.8;          // 音量
-      audioEl.playbackRate = 0.75;   // 语速
+      audioEl.playbackRate = 0.7;   // 语速
       audioEl.play();
     };
 
